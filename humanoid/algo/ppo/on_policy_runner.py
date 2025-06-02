@@ -92,6 +92,9 @@ class OnPolicyRunner:
 
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
+
+        my_parameter_history = [] # added by me 
+
         if self.log_dir is not None and self.writer is None:
             wandb.init(
                 project="XBot",
@@ -158,9 +161,23 @@ class OnPolicyRunner:
 
                 # Learning step
                 start = stop
-                self.alg.compute_returns(critic_obs)
+                self.alg.compute_returns(critic_obs) # BOOKMARK: compute return in learning loop
 
-            mean_value_loss, mean_surrogate_loss = self.alg.update()
+            mean_value_loss, mean_surrogate_loss = self.alg.update() # BOOKMARK: update in learning loop
+
+            ### test: vanilla PPO has 926105 parameters
+            # num_trainable_params = sum(p.numel() for p in self.alg.actor_critic.parameters() if p.requires_grad)
+            # print(f"Trainable parameters: {num_trainable_params}")
+            # save parameter update history
+            flat_trainable_params = torch.cat([
+                p.data.view(-1) for p in self.alg.actor_critic.parameters() if p.requires_grad
+            ]).detach().cpu()
+            my_parameter_history.append(flat_trainable_params)
+
+            if it%5 == 0 and it > 1:
+                torch.save(my_parameter_history, 'trainable_param_history.pt')
+                print('parameter saved')
+
             stop = time.time()
             learn_time = stop - start
             if self.log_dir is not None:

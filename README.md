@@ -95,8 +95,14 @@ python scripts/play.py --task=humanoid_ppo --run_name v1
 # You have to run play.py first to get the JIT model and use it with sim2sim.py
 python scripts/sim2sim.py --load_model /path/to/logs/XBot_ppo/exported/policies/policy_1.pt
 
+# My case:
+python scripts/sim2sim.py --load_model ~/github/humanoid-gym/logs/XBot_ppo/exported/policies/policy_1.pt
+
 # Run our trained policy
 python scripts/sim2sim.py --load_model /path/to/logs/XBot_ppo/exported/policies/policy_example.pt
+
+# My case:
+python scripts/sim2sim.py --load_model ~/github/humanoid-gym/logs/XBot_ppo/exported/policies/policy_example.pt
 
 ```
 

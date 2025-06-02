@@ -4,6 +4,7 @@
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
 isaacgym/
+trainable_param_history.pt
 
 # Node artifact files
 node_modules/

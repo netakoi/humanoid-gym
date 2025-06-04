@@ -44,6 +44,12 @@ import torch
 from tqdm import tqdm
 from datetime import datetime
 
+# Koopman decompositioni
+import sys
+sys.path.append('/home/joonwon/github/humanoid-gym/humanoid/Koopman')
+from Autoencoder import *
+from Autoencoder_functions import *
+
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -75,8 +81,43 @@ def play(args):
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
-    policy = ppo_runner.get_inference_policy(device=env.device)
     
+    ############# If decompose model is used
+    if args.decompose > -1:
+        print('########################################')
+        print('Apply Koopman decomposition - Mode: ' + str(args.decompose))
+        print('########################################')
+
+        # Temporal hard coded params
+        c1, c2, c3, p, hidden_k = 1, 1, 1, 20, 64
+
+        params_snapshots = torch.load('Koopman/sliced_param_history.pt')
+        max_param_stack = len(params_snapshots)
+        state_dim = params_snapshots.shape[1]    
+        kae = KoopmanAutoencoder(state_dim=state_dim, hidden_dim=hidden_k).to(env.device)
+        print('KAE model generated')
+        kae = torch.load("Koopman/KAE_[1, 64, 'humanoid']_3000_2025-06-02.pth", weights_only=False, map_location=env.device)
+        kae.to(env.device)
+        temp = params_snapshots # Bookmark: this part need to be fixed. Hardcoded
+        params_snapshots = list(temp)   
+        print('KAE model loaded')
+        
+        _, z = compute_l_kae(kae, params_snapshots, c1, c2, c3, p, env.device) # Koopman operator is updated here.
+        N_O = z.shape[-1]
+        param_sub_all, eigvals = compute_theta_sub_all(kae, z, kae.K)
+        
+        # Function to replace param value
+        target_param = param_sub_all[:,args.decompose]
+        idx = 0
+        for param in ppo_runner.alg.actor_critic.parameters():
+            n = param.numel()
+            param.data.copy_(target_param[idx : idx + n].view_as(param))
+            idx += n
+
+    ############# 
+
+    policy = ppo_runner.get_inference_policy(device=env.device)
+
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
         path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
@@ -105,7 +146,7 @@ def play(args):
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         video_dir = os.path.join(LEGGED_GYM_ROOT_DIR, 'videos')
         experiment_dir = os.path.join(LEGGED_GYM_ROOT_DIR, 'videos', train_cfg.runner.experiment_name)
-        dir = os.path.join(experiment_dir, datetime.now().strftime('%b%d_%H-%M-%S')+ args.run_name + '.mp4')
+        dir = os.path.join(experiment_dir, datetime.now().strftime('%b%d_%H-%M-%S')+ '-decomp_'+str(args.decompose)+'-'+args.run_name + '.mp4')
         if not os.path.exists(video_dir):
             os.mkdir(video_dir)
         if not os.path.exists(experiment_dir):

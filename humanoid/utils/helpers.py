@@ -231,6 +231,12 @@ def get_args():
             "type": int,
             "help": "Maximum number of training iterations. Overrides config file if provided.",
         },
+        {
+            "name": "--decompose",
+            "type": int,
+            "default": -1,
+            "help": "Apply Koopman decomposition",
+        },
     ]
     # parse arguments
     args = gymutil.parse_arguments(

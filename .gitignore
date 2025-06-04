@@ -6,6 +6,8 @@
 isaacgym/
 # trainable_param_history.pt
 humanoid/*.pt
+humanoid/Koopman/*.pth
+humanoid/Koopman/*.pt
 
 # Node artifact files
 node_modules/

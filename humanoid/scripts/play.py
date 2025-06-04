@@ -106,6 +106,7 @@ def play(args):
         N_O = z.shape[-1]
         param_sub_all, eigvals = compute_theta_sub_all(kae, z, kae.K)
         
+        
         # Function to replace param value
         target_param = param_sub_all[:,args.decompose]
         idx = 0
